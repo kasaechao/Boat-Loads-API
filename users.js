@@ -9,15 +9,28 @@ const datastore = ds.datastore
 router.use(express.json())
 
 
-/* ------------- Utility Functions --------------------- */
-/* ------------- Utility Functions --------------------- */
+/* ------------- UTILITY FUNCTIONS START --------------- */
+function fromDatastore(item) {
+  item.id = parseInt(item[datastore.KEY].id, 10);
+  return item;
+}
 
-/* ------------- Datastore Model Functions ------------- */
-/* ------------- Datastore Model Functions ------------- */
+
+function generateSelf (obj, req, type) {
+  const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
+  obj['self'] = self
+  return obj
+}
+/* ------------- UTILITY FUNCTIONS END ----------------- */
+
+/* ------------- DATASTORE MODEL FUNCTIONS START ------- */
+
+  
+/* ------------- DATASTORE MODEL FUNCTIONS END -------- */
 
 
-/* ------------- Routing Functions --------------------- */
-/* ------------- Routing Functions --------------------- */
+/* ------------- ROUTING FUNCTIONS START --------------------- */
+/* ------------- ROUTING FUNCTIONS END --------------------- */
 
 
 module.exports = router
