@@ -24,10 +24,22 @@ function generateSelf (obj, req, type) {
 /* ------------- UTILITY FUNCTIONS END ----------------- */
 
 /* ------------- DATASTORE MODEL FUNCTIONS START-------- */
+
+async function viewAllLoads() {
+  const q = datastore.createQuery(LOAD)
+  const result = await datastore.runQuery(q)
+  return result[0].map(fromDatastore)
+}
+
 /* ------------- DATASTORE MODEL FUNCTIONS END --------- */
 
 
 /* ------------- ROUTING FUNCTIONS START --------------- */
+
+router.get('/', async (req, res) => {
+  const allLoads = await viewAllLoads()
+  res.status(200).json({result: allLoads})
+})
 /* ------------- ROUTING FUNCTIONS END ----------------- */
 
 
