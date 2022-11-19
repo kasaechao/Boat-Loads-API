@@ -37,7 +37,7 @@ function generateSelf (obj, req, type) {
 /* ------------- UTILITY FUNCTIONS END --------------------- */
 
 
-/* ------------- VERIFICATION FUNCTIONS END ---------------- */
+/* ------------- VERIFICATION FUNCTIONS START -------------- */
 
 function verifyBoatName(name) {
   // must be a string
@@ -307,7 +307,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-router.put('/boats/:boat_id', async (req, res) => {
+router.put('/:boat_id', async (req, res) => {
   const verifyResult = await verifyPutRequest(req)
   switch (verifyResult) {
     case 400:
@@ -327,7 +327,7 @@ router.put('/boats/:boat_id', async (req, res) => {
       break
     default:
       await editBoatPut(req)
-      res.location(location).status(303).end()
+      res.status(200).end()
   }
 })
 
@@ -355,7 +355,7 @@ router.patch('/:boat_id', async (req, res) => {
   }
 })
 
-router.delete('/', async (req, res) => {
+router.delete('/:boat_id', async (req, res) => {
   const result = deleteBoat(req.params.boat_id)
   switch (result) {
     case 404:
