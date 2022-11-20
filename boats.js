@@ -212,7 +212,13 @@ async function viewBoat(boat_id) {
 
 async function addBoat(name, type, length) {
   let key = datastore.key(BOAT)
-  let newBoat = {'name': name, 'type': type, 'length': length, 'loads': [], owner: null}
+  let newBoat = {
+    'name': name, 
+    'type': type, 
+    'length': length, 
+    'loads': [], 
+    'owner': null
+  }
   await datastore.save({ 'key': key, 'data': newBoat })
   return key
 }
@@ -243,8 +249,8 @@ async function editBoatPatch(req) {
   boat.type = type === undefined ? boat.type : type
   boat.length = length === undefined ? boat.length : length
 
-  boat = datastore.save({"key": key, "data": boat})
-    .then(boat => { return boat })
+  await datastore.save({"key": key, "data": boat})
+  return boat
 }
 
 
@@ -365,8 +371,6 @@ router.delete('/:boat_id', async (req, res) => {
       res.status(204).end()
   }
 })
-
-
 
 /* ------------- ROUTING FUNCTIONS END --------------------- */
 
