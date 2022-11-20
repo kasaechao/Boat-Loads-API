@@ -262,6 +262,53 @@ async function deleteBoat(boat_id) {
 }
 
 
+async function assignLoad(boat_id, load_id) {
+  // get boat and load from datastore
+  const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
+  const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
+  let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
+  let load = await datastore.get(load_key).then(load => { return load[0] })
+  if (boat === undefined || boat === null || load === undefined || load === null) { return 404 }
+
+  // load already assigned to another boat
+  if (load.carrier !== null) { return 403 }
+
+  // cannot add duplicate loads, 400 error
+  for (let i = 0; i < boat.loads.length; i++) {
+    if (Object.values(boat.loads[i]).includes(load_id) === true) { return 400 }
+  }
+
+  boat.loads.push({"id": parseInt(load_id, 10)})
+  load.carrier = {"id": parseInt(boat_id, 10), "name": boat.name}
+  await datastore.save({"key": load_key, "data": load})
+  await datastore.save({"key": boat_key, "data": boat})
+
+  return 0 
+}
+
+
+async function removeLoad(boat_id, load_id) {
+  // get boat and load from datastore
+  const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
+  const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
+  let boat = await datastore.get(boat_key).then(boat => {return boat[0]})
+  let load = await datastore.get(load_key).then(load => {return load[0]})
+
+  if ((boat === undefined || boat === null || load === undefined || 
+       load === null || boat.loads.filter(load => load.id == load_id).length == 0 || 
+       load.carrier.id != boat_id)) { 
+
+    return 404 
+  }
+
+  boat.loads = boat.loads.filter(load => load.id != load_id)
+  load.carrier = null
+  await datastore.save({"key": load_key, "data": load})
+  await datastore.save({"key": boat_key, "data": boat})
+  return 204
+}
+
+
 /* ------------- DATASTORE MODEL FUNCTIONS END ------------- */
 
 
@@ -280,7 +327,6 @@ router.get('/:boat_id', async (req, res) => {
     res.status(404).json(errorMsg(404)) 
   } else { 
     generateSelf(boat[0], req)
-    console.log(boat);
     res.status(200).json(boat[0]) 
   }
 })
@@ -361,8 +407,23 @@ router.patch('/:boat_id', async (req, res) => {
   }
 })
 
+router.put('/:boat_id/loads/:load_id', async (req, res) => {
+  const result = await assignLoadToBoat(req.params.boat_id, req.params.load_id)
+  switch (result) {
+    case 404: 
+      res.status(404)
+        .json({"Error": "The specified boat and/or load does not exist"})
+      break;
+    case 403: 
+      res.status(403)
+        .json({"Error": "The load is already loaded on another boat"})
+    default: 
+      res.status(204).end()
+  }
+})
+
 router.delete('/:boat_id', async (req, res) => {
-  const result = deleteBoat(req.params.boat_id)
+  const result = await deleteBoat(req.params.boat_id)
   switch (result) {
     case 404:
       res.status(404).json(errorMsg(404))
@@ -371,6 +432,19 @@ router.delete('/:boat_id', async (req, res) => {
       res.status(204).end()
   }
 })
+
+
+router.delete('/:boat_id/loads/:load_id', async (req, res) => {
+  const result = await removeLoadFromBoat(req.params.boat_id, req.params.load_id)
+  switch (result) {
+    case 404:
+      res.status(404).json({"Error":"No boat with this boat_id is loaded with the load with this load_id"}) 
+      break
+    default:
+      res.status(204).end()
+  }
+})
+
 
 /* ------------- ROUTING FUNCTIONS END --------------------- */
 

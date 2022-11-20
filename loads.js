@@ -165,11 +165,11 @@ async function verifyPostRequest(req) {
   if (!req.accepts(['application/json'])) { return 406 }
 
   // verify correct attributes, and correct number of attributes
-  // if ((Object.keys(req.body).length > 3 || req.body.name === undefined || req.body.type === undefined || req.body.length === undefined || 
-  //      req.body.name === null || req.body.type === null || req.body.length === null ||
-  //      typeof req.body.name !== "string" || typeof req.body.type !== "string" || typeof req.body.length !== "number")) {
-  //   return 400
-  // } 
+  if ((Object.keys(req.body).length > 3 || req.body.item === undefined || req.body.volume === undefined || req.body.creation_date === undefined || 
+       req.body.item === null || req.body.volume === null || req.body.creation_date === null ||
+       typeof req.body.item !== "string" || typeof req.body.creation_date !== "string" || typeof req.body.volume !== "number")) {
+    return 400
+  } 
 
   // // verfiy load name is valid
   // if (verifyLoadName(req.body.name) === 400) { return 400 }
@@ -251,6 +251,25 @@ async function deleteLoad(load_id) {
   let load = await datastore.get(load_key).then(load => { return load[0] })
   if (load === undefined || load === null) { return 404 }
   return datastore.delete(load_key).then(result => { return result });
+}
+
+
+async function assignCarrier(boat_id, load_id) {
+// look up boat in datastore
+// look up load in datastore
+// check if load is already on a carrier
+
+// assign carrier to load
+// assign load to carrier
+}
+
+async function removeCarrier(boat_id, load_id) {
+// look up boat
+// look up load
+// find load in boat
+
+// remove load from boat
+// remove carrier from load
 }
 
 /* ------------- DATASTORE MODEL FUNCTIONS END --------- */
