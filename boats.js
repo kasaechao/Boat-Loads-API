@@ -257,28 +257,19 @@ async function editBoatPatch(req) {
   return boat
 }
 
-async function deleteBoatFromLoad(boat) {
-  boat.loads.forEach(load => {
-    if (load.id === boat_id) { 
-      // look up load and set carrier to null
-      const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
-      datastore.get(key).then(load => {
-        load.carrier = null
-        datastore.save({'key': load_key, 'data': load}).then(result => {
-          return result
-        })
-      })
-    }
-  })
-}
-
 async function deleteBoat(boat_id) {
   const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
   let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
   if (boat === undefined || boat === null) { return 404 }
 
   // check if a load has current boat as owner
-  boat.loads.forEach(load => removeLoad(boat_id, load.id))
+  let foundLoad = false
+
+  // boat.loads.forEach(async load => await removeLoad(boat_id, load.id))
+
+  for (let i=0; i < boat.loads.length; i++) {
+    await removeLoad(boat_id, boat.loads[i].id)
+  }
 
   return datastore.delete(boat_key).then(result => { return result });
 }
