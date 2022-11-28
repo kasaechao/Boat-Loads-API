@@ -200,10 +200,27 @@ async function verifyPostRequest(req) {
 
 /* ------------- DATASTORE MODEL FUNCTIONS START-------- */
 
-async function viewAllLoads() {
-  const q = datastore.createQuery(LOAD)
-  const result = await datastore.runQuery(q)
-  return result[0].map(fromDatastore)
+async function viewAllLoads(req) {
+  let limit = 5
+  let q = datastore.createQuery(LOAD).limit(limit)
+  const results = {}
+  let prev
+  if(Object.keys(req.query).includes("cursor")){
+      prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor
+      q = q.start(req.query.cursor)
+  }
+
+  return datastore.runQuery(q)
+    .then( (entities) => {
+      results.result = entities[0].map(ds.fromDatastore);
+      if(typeof prev !== 'undefined'){
+          results.previous = prev
+      }
+      if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){
+          results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor
+      }
+      return results
+  })
 }
 
 
@@ -265,7 +282,7 @@ async function deleteLoad(load_id) {
   if (load === undefined || load === null) { return 404 }
 
   // if carrier is not null, search and delete load on carrier
-  if (load.carrier.id !== undefined || load.carrier.id !== null) {
+  if ((load.carrier !== null && load.carrier !== undefined) && (load.carrier.id !== undefined || load.carrier.id !== null)) {
     await removeCarrier(load.carrier.id, load_id)
   }
 
@@ -343,14 +360,14 @@ router.get('/', async (req, res) => {
     res.status(406).json(errorMsg(406))
     return
   }
-  const allLoads = await viewAllLoads()
-  allLoads.forEach(load => {
+  const allLoads = await viewAllLoads(req)
+  allLoads.result.forEach(load => {
     generateSelf(load, req, 'loads')
     if (load.carrier !== null) {
       generateSelf(load.carrier, req, 'boats')
     }
   })
-  res.status(200).json({result: allLoads})
+  res.status(200).json(allLoads)
 })
 
 router.get('/:load_id', async (req, res) => {

@@ -85,7 +85,7 @@ function verifyBoatLength(length) {
 }
 
 async function findDuplicateName(boatName) {
-  let allBoats = await viewAllBoats().then(boats => { return boats })
+  // let allBoats = await viewAllBoats(req).then(boats => { return boats })
 
   // // allow user to edit same boat
   // for (let i = 0; i < allBoats.length; i++) {
@@ -205,12 +205,28 @@ async function verifyPostRequest(req) {
 
 /* ------------- DATASTORE MODEL FUNCTIONS START ----------- */
 
-async function viewAllBoats() {
-  const q = datastore.createQuery(BOAT)
-  const result = await datastore.runQuery(q)
-  return result[0].map(fromDatastore)
-}
+async function viewAllBoats(req) {
+  let limit = 5
+  let q = datastore.createQuery(BOAT).limit(limit)
+  const results = {}
+  let prev
+  if(Object.keys(req.query).includes("cursor")){
+      prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor
+      q = q.start(req.query.cursor)
+  }
 
+  return datastore.runQuery(q)
+    .then( (entities) => {
+      results.result = entities[0].map(ds.fromDatastore);
+      if(typeof prev !== 'undefined'){
+          results.previous = prev
+      }
+      if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){
+          results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor
+      }
+      return results
+  })
+}
 
 
 async function viewBoat(boat_id) {
@@ -220,7 +236,6 @@ async function viewBoat(boat_id) {
     return boat.map(fromDatastore)
   })
 }
-
 
 
 async function addBoat(name, type, length) {
@@ -357,12 +372,12 @@ router.get('/', async (req, res) => {
     res.status(406).json(errorMsg(406))
     return
   }
-    const allBoats = await viewAllBoats()
-  allBoats.forEach(boat => {
+  const allBoats = await viewAllBoats(req)
+  allBoats.result.forEach(boat => {
     generateSelf(boat, req, 'boats')
     boat.loads.forEach(load => generateSelf(load, req, 'loads'))
   })
-  res.status(200).json({ 'result': allBoats })
+  res.status(200).json(allBoats)
 })
 
 
