@@ -29,7 +29,7 @@ function fromDatastore(item) {
 
 
 function generateSelf (obj, req, type) {
-  const self = `${req.protocol}://${req.get('host')}${req.baseUrl}/${obj.id}`
+  const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
   obj['self'] = self
   return obj
 }
@@ -312,6 +312,12 @@ async function removeCarrier(boat_id, load_id) {
 
 router.get('/', async (req, res) => {
   const allLoads = await viewAllLoads()
+  allLoads.forEach(load => {
+    generateSelf(load, req, 'loads')
+    if (load.carrier !== null) {
+      generateSelf(load.carrier, req, 'boats')
+    }
+  })
   res.status(200).json({result: allLoads})
 })
 
@@ -320,7 +326,10 @@ router.get('/:load_id', async (req, res) => {
   if (load === 404) { 
     res.status(404).json(errorMsg(404)) 
   } else { 
-    generateSelf(load[0], req)
+    generateSelf(load[0], req, 'loads')
+    if (load[0].carrier !== null) {
+      generateSelf(load[0].carrier, req, 'boats')
+    }
     res.status(200).json(load[0]) 
   }
 })

@@ -8,7 +8,6 @@ const datastore = ds.datastore
 
 router.use(express.json())
 
-
 /* ------------- UTILITY FUNCTIONS START ------------------- */
 
 function errorMsg(statusCode) {
@@ -265,7 +264,6 @@ async function deleteBoat(boat_id) {
   // check if a load has current boat as owner
   let foundLoad = false
 
-  // boat.loads.forEach(async load => await removeLoad(boat_id, load.id))
 
   for (let i=0; i < boat.loads.length; i++) {
     await removeLoad(boat_id, boat.loads[i].id)
