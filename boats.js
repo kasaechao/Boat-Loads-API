@@ -257,6 +257,20 @@ async function editBoatPatch(req) {
   return boat
 }
 
+async function deleteBoatFromLoad(boat) {
+  boat.loads.forEach(load => {
+    if (load.id === boat_id) { 
+      // look up load and set carrier to null
+      const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
+      datastore.get(key).then(load => {
+        load.carrier = null
+        datastore.save({'key': load_key, 'data': load}).then(result => {
+          return result
+        })
+      })
+    }
+  })
+}
 
 async function deleteBoat(boat_id) {
   const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
@@ -264,9 +278,7 @@ async function deleteBoat(boat_id) {
   if (boat === undefined || boat === null) { return 404 }
 
   // check if a load has current boat as owner
-  if (boat.loads.length > 0) {
-
-  }
+  boat.loads.forEach(load => removeLoad(boat_id, load.id))
 
   return datastore.delete(boat_key).then(result => { return result });
 }
@@ -326,7 +338,10 @@ async function removeLoad(boat_id, load_id) {
 
 router.get('/', async (req, res) => {
   const allBoats = await viewAllBoats()
-  allBoats.forEach(boat => generateSelf(boat, req, 'boats'))
+  allBoats.forEach(boat => {
+    generateSelf(boat, req, 'boats')
+    boat.loads.forEach(load => generateSelf(load, req, 'loads'))
+  })
   res.status(200).json({ 'result': allBoats })
 })
 
@@ -337,6 +352,7 @@ router.get('/:boat_id', async (req, res) => {
     res.status(404).json(errorMsg(404)) 
   } else { 
     generateSelf(boat[0], req, 'boats')
+    boat[0].loads.forEach(load => generateSelf(load, req, 'loads'))
     res.status(200).json(boat[0]) 
   }
 })
@@ -420,8 +436,9 @@ router.patch('/:boat_id', async (req, res) => {
   }
 })
 
+// add load to boat
 router.put('/:boat_id/loads/:load_id', async (req, res) => {
-  const result = await assignLoadToBoat(req.params.boat_id, req.params.load_id)
+  const result = await assignLoad(req.params.boat_id, req.params.load_id)
   switch (result) {
     case 404: 
       res.status(404)
@@ -446,9 +463,9 @@ router.delete('/:boat_id', async (req, res) => {
   }
 })
 
-
+// remove load from boat
 router.delete('/:boat_id/loads/:load_id', async (req, res) => {
-  const result = await removeLoadFromBoat(req.params.boat_id, req.params.load_id)
+  const result = await removeLoad(req.params.boat_id, req.params.load_id)
   switch (result) {
     case 404:
       res.status(404).json({"Error":"No boat with this boat_id is loaded with the load with this load_id"}) 

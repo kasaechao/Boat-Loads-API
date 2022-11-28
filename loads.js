@@ -195,7 +195,7 @@ async function viewAllLoads() {
 
 
 async function viewLoad(load_id) {
-  const key = datastore.key([LOAD, parseInt(load_id)])
+  const key = datastore.key([LOAD, parseInt(load_id, 10)])
   return datastore.get(key).then(load => {
     if (load[0] === undefined || load[0] === null) { return 404 }
     return load.map(fromDatastore)
@@ -203,7 +203,7 @@ async function viewLoad(load_id) {
 }
 
 
-async function addLoad(volume, item, creation_date) {
+async function addLoad(item, volume, creation_date) {
   let key = datastore.key(LOAD)
   let newLoad = {
     'item': item, 
@@ -250,26 +250,59 @@ async function deleteLoad(load_id) {
   const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
   let load = await datastore.get(load_key).then(load => { return load[0] })
   if (load === undefined || load === null) { return 404 }
+
+  // if carrier is not null, search and delete load on carrier
+  if (load.carrier.id !== undefined || load.carrier.id !== null) {
+    await removeCarrier(load.carrier.id, load_id)
+  }
+
   return datastore.delete(load_key).then(result => { return result });
 }
 
 
 async function assignCarrier(boat_id, load_id) {
-// look up boat in datastore
-// look up load in datastore
-// check if load is already on a carrier
+  // get boat and load from datastore
+  const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
+  const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
+  let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
+  let load = await datastore.get(load_key).then(load => { return load[0] })
+  if (boat === undefined || boat === null || load === undefined || load === null) { return 404 }
 
-// assign carrier to load
-// assign load to carrier
+  // load already assigned to another boat
+  if (load.carrier !== null) { return 403 }
+
+  // cannot add duplicate loads, 400 error
+  for (let i = 0; i < boat.loads.length; i++) {
+    if (Object.values(boat.loads[i]).includes(load_id) === true) { return 400 }
+  }
+
+  boat.loads.push({"id": parseInt(load_id, 10)})
+  load.carrier = {"id": parseInt(boat_id, 10), "name": boat.name}
+  await datastore.save({"key": load_key, "data": load})
+  await datastore.save({"key": boat_key, "data": boat})
+
+  return 0 
 }
 
 async function removeCarrier(boat_id, load_id) {
-// look up boat
-// look up load
-// find load in boat
+  // get boat and load from datastore
+  const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
+  const load_key = datastore.key([LOAD, parseInt(load_id, 10)])
+  let boat = await datastore.get(boat_key).then(boat => {return boat[0]})
+  let load = await datastore.get(load_key).then(load => {return load[0]})
 
-// remove load from boat
-// remove carrier from load
+  if ((boat === undefined || boat === null || load === undefined || 
+       load === null || boat.loads.filter(load => load.id == load_id).length == 0 || 
+       load.carrier.id != boat_id)) { 
+
+    return 404 
+  }
+
+  boat.loads = boat.loads.filter(load => load.id != load_id)
+  load.carrier = null
+  await datastore.save({"key": load_key, "data": load})
+  await datastore.save({"key": boat_key, "data": boat})
+  return 204
 }
 
 /* ------------- DATASTORE MODEL FUNCTIONS END --------- */
@@ -288,7 +321,6 @@ router.get('/:load_id', async (req, res) => {
     res.status(404).json(errorMsg(404)) 
   } else { 
     generateSelf(load[0], req)
-    console.log(load);
     res.status(200).json(load[0]) 
   }
 })
