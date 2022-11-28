@@ -33,6 +33,18 @@ function generateSelf (obj, req, type) {
   return obj
 }
 
+function reqBodyIsJSON(req) {
+  // req must be JSON
+  if (req.get('content-type') !== 'application/json'){ return false }
+  return true
+}
+
+function resBodyIsJSON(req) {
+  // response must be JSON
+  if (!req.accepts(['application/json'])) { return false }
+  return true
+}
+
 /* ------------- UTILITY FUNCTIONS END --------------------- */
 
 
@@ -325,8 +337,27 @@ async function removeLoad(boat_id, load_id) {
 
 /* ------------- ROUTING FUNCTIONS START ------------------- */
 
+router.put('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
+router.patch('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
+router.delete('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
 router.get('/', async (req, res) => {
-  const allBoats = await viewAllBoats()
+  if (resBodyIsJSON(req) === false) { 
+    res.status(406).json(errorMsg(406))
+    return
+  }
+    const allBoats = await viewAllBoats()
   allBoats.forEach(boat => {
     generateSelf(boat, req, 'boats')
     boat.loads.forEach(load => generateSelf(load, req, 'loads'))
@@ -336,6 +367,10 @@ router.get('/', async (req, res) => {
 
 
 router.get('/:boat_id', async (req, res) => {
+  if (resBodyIsJSON(req) === false) { 
+    res.status(406).json(errorMsg(406))
+    return
+  }
   const boat = await viewBoat(req.params.boat_id)
   if (boat === 404) { 
     res.status(404).json(errorMsg(404)) 
@@ -358,6 +393,9 @@ router.post('/', async (req, res) => {
     case 406:
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
+    case 415:
+      res.status(verifyResult).json(errorMsg(verifyResult))
+      break;
     default:
       const { name, type, length } = req.body
       const postedBoat = await addBoat(name, type, length)
@@ -430,12 +468,11 @@ router.put('/:boat_id/loads/:load_id', async (req, res) => {
   const result = await assignLoad(req.params.boat_id, req.params.load_id)
   switch (result) {
     case 404: 
-      res.status(404)
-        .json({"Error": "The specified boat and/or load does not exist"})
-      break;
+      res.status(404).json(errorMsg(404))
+      break
     case 403: 
-      res.status(403)
-        .json({"Error": "The load is already loaded on another boat"})
+      res.status(403).json(errorMsg(403))
+      break
     default: 
       res.status(204).end()
   }
@@ -457,7 +494,7 @@ router.delete('/:boat_id/loads/:load_id', async (req, res) => {
   const result = await removeLoad(req.params.boat_id, req.params.load_id)
   switch (result) {
     case 404:
-      res.status(404).json({"Error":"No boat with this boat_id is loaded with the load with this load_id"}) 
+      res.status(404).json(errorMsg(404)) 
       break
     default:
       res.status(204).end()

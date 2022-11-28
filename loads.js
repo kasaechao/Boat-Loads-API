@@ -22,6 +22,7 @@ function errorMsg(statusCode) {
   return error_msgs[String(statusCode)]
 }
 
+
 function fromDatastore(item) {
   item.id = parseInt(item[datastore.KEY].id, 10);
   return item;
@@ -32,6 +33,18 @@ function generateSelf (obj, req, type) {
   const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
   obj['self'] = self
   return obj
+}
+
+function reqBodyIsJSON(req) {
+  // req must be JSON
+  if (req.get('content-type') !== 'application/json'){ return false }
+  return true
+}
+
+function resBodyIsJSON(req) {
+  // response must be JSON
+  if (!req.accepts(['application/json'])) { return false }
+  return true
 }
 /* ------------- UTILITY FUNCTIONS END --------------------- */
 
@@ -310,7 +323,26 @@ async function removeCarrier(boat_id, load_id) {
 
 /* ------------- ROUTING FUNCTIONS START --------------- */
 
+router.put('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
+router.patch('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
+router.delete('/', (req, res) => {
+  res.set('Accept', 'GET')
+  res.status(405).json(errorMsg(405))
+})
+
 router.get('/', async (req, res) => {
+  if (resBodyIsJSON(req) === false) { 
+    res.status(406).json(errorMsg(406))
+    return
+  }
   const allLoads = await viewAllLoads()
   allLoads.forEach(load => {
     generateSelf(load, req, 'loads')
@@ -322,6 +354,10 @@ router.get('/', async (req, res) => {
 })
 
 router.get('/:load_id', async (req, res) => {
+  if (resBodyIsJSON(req) === false) { 
+    res.status(406).json(errorMsg(406))
+    return
+  }
   const load = await viewLoad(req.params.load_id)
   if (load === 404) { 
     res.status(404).json(errorMsg(404)) 
@@ -344,6 +380,9 @@ router.post('/', async (req, res) => {
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     case 406:
+      res.status(verifyResult).json(errorMsg(verifyResult))
+      break
+    case 415:
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     default:
