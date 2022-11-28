@@ -1,9 +1,11 @@
+const BOAT = 'Boats'
+const LOAD = 'Loads'
+const USER = 'Users'
 const ds = require('./datastore')
 const datastore = ds.datastore
 
 
-/* ------------- Utility Functions --------------------- */
-
+/* ------- Utility Functions Start -------------------- */
 function fromDatastore(item) {
   item.id = parseInt(item[datastore.KEY].id, 10);
   return item;
@@ -16,26 +18,13 @@ function generateSelf (obj, req, type) {
   return obj
 }
 
-/* ------------- Utility Functions --------------------- */
-
-/* ------------- Datastore Model Functions ------------- */
-
-function viewAllEntities(entity) {
-  const q = datastore.createQuery(entity)
-  return datastore.runQuery(q).then(entities => {
-    return entities[0].map(fromDatastore)
-  })
-
-}
-  
-/* ------------- Datastore Model Functions ------------- */
+/* ------- Utility Functions End ---------------------- */
 
 
 
 module.exports = { 
   fromDatastore, 
-  generateSelf, 
-  viewAllEntities 
+  generateSelf
 }
 
 

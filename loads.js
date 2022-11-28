@@ -57,11 +57,11 @@ function verifyLoadItem(itemName) {
 
 
 function verifyLoadVolume(volume) {
-  // volume must be an integer
-  if (typeof volume !== 'number') {  return 400 }
+  // // volume must be an integer
+  // if (typeof volume !== 'number') {  return 400 }
 
-  // cannot be 0 or negative length
-  if (volume <= 0) { return 400}
+  // // cannot be 0 or negative length
+  // if (volume <= 0) { return 400}
 
   return 0
 }
@@ -338,8 +338,9 @@ router.put('/:load_id', async (req, res) => {
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     default:
-      await editLoadPut(req)
-      res.status(200).end()
+      const editedLoad = await editLoadPut(req)
+      generateSelf(editedLoad, req, 'loads')
+      res.status(200).json(editedLoad)
   }
 })
 
@@ -362,13 +363,14 @@ router.patch('/:load_id', async (req, res) => {
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     default:
-      await editLoadPatch(req)
-      res.status(200).end()
+      const editedLoad = await editLoadPatch(req)
+      generateSelf(editedLoad, req, 'loads')
+      res.status(200).json(editedLoad)
   }
 })
 
 router.delete('/:load_id', async (req, res) => {
-  const result = deleteLoad(req.params.load_id)
+  const result = await deleteLoad(req.params.load_id)
   switch (result) {
     case 404:
       res.status(404).json(errorMsg(404))

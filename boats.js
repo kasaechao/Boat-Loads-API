@@ -22,7 +22,6 @@ function errorMsg(statusCode) {
   }
   return error_msgs[String(statusCode)]
 }
-
 function fromDatastore(item) {
   item.id = parseInt(item[datastore.KEY].id, 10);
   return item;
@@ -30,10 +29,11 @@ function fromDatastore(item) {
 
 
 function generateSelf (obj, req, type) {
-  const self = `${req.protocol}://${req.get('host')}${req.baseUrl}/${obj.id}`
+  const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
   obj['self'] = self
   return obj
 }
+
 /* ------------- UTILITY FUNCTIONS END --------------------- */
 
 
@@ -201,6 +201,7 @@ async function viewAllBoats() {
 }
 
 
+
 async function viewBoat(boat_id) {
   const key = datastore.key([BOAT, parseInt(boat_id)])
   return datastore.get(key).then(boat => {
@@ -208,6 +209,7 @@ async function viewBoat(boat_id) {
     return boat.map(fromDatastore)
   })
 }
+
 
 
 async function addBoat(name, type, length) {
@@ -238,6 +240,8 @@ async function editBoatPut(req) {
 }
 
 
+
+
 async function editBoatPatch(req) {
   const boat_id = req.params.boat_id
   const { name, type, length } = req.body
@@ -258,6 +262,12 @@ async function deleteBoat(boat_id) {
   const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
   let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
   if (boat === undefined || boat === null) { return 404 }
+
+  // check if a load has current boat as owner
+  if (boat.loads.length > 0) {
+
+  }
+
   return datastore.delete(boat_key).then(result => { return result });
 }
 
@@ -316,7 +326,7 @@ async function removeLoad(boat_id, load_id) {
 
 router.get('/', async (req, res) => {
   const allBoats = await viewAllBoats()
-  allBoats.forEach(boat => generateSelf(boat, req))
+  allBoats.forEach(boat => generateSelf(boat, req, 'boats'))
   res.status(200).json({ 'result': allBoats })
 })
 
@@ -326,7 +336,7 @@ router.get('/:boat_id', async (req, res) => {
   if (boat === 404) { 
     res.status(404).json(errorMsg(404)) 
   } else { 
-    generateSelf(boat[0], req)
+    generateSelf(boat[0], req, 'boats')
     res.status(200).json(boat[0]) 
   }
 })
@@ -378,8 +388,10 @@ router.put('/:boat_id', async (req, res) => {
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     default:
-      await editBoatPut(req)
-      res.status(200).end()
+      const editedBoat = await editBoatPut(req)
+      generateSelf(editedBoat, req, 'boats')
+      res.status(200).json(editedBoat)
+
   }
 })
 
@@ -402,8 +414,9 @@ router.patch('/:boat_id', async (req, res) => {
       res.status(verifyResult).json(errorMsg(verifyResult))
       break
     default:
-      await editBoatPatch(req)
-      res.status(200).end()
+      const patchedBoat = await editBoatPatch(req)
+      generateSelf(patchedBoat, req, 'boats')
+      res.status(200).json(patchedBoat)
   }
 })
 
