@@ -210,6 +210,10 @@ async function viewAllLoads(req) {
       q = q.start(req.query.cursor)
   }
 
+  const total_q = datastore.createQuery(LOAD)
+  const total_q_result = await datastore.runQuery(total_q)
+  results.total_collection_length = total_q_result[0].length
+
   return datastore.runQuery(q)
     .then( (entities) => {
       results.result = entities[0].map(ds.fromDatastore);
