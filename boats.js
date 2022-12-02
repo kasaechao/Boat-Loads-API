@@ -7,6 +7,8 @@ const ds = require('./datastore')
 const datastore = ds.datastore
 
 router.use(express.json())
+const { expressjwt: jwt, expressjwt } = require("express-jwt")
+const jwksRsa = require('jwks-rsa')
 
 /* ------------- UTILITY FUNCTIONS START ------------------- */
 
@@ -44,6 +46,41 @@ function resBodyIsJSON(req) {
   if (!req.accepts(['application/json'])) { return false }
   return true
 }
+
+function parseUserId(req) {
+  return req.auth.sub.split('auth0|')[1]
+}
+
+const DOMAIN = 'cs493-portfolio-saechaok.us.auth0.com'
+const CLIENT_ID = 'nEmEtb2gZbkreml2ay2uQGa6Uj3PQFw2'
+const CLIENT_SECRET = 'iWuLZMYvnQz5WsInf8VmUS3R8A3mZwDzeXPQwB65AG-o3m0aQcAyFMyrxdyQC_me'
+const REDIRECT_URI = 'http://localhost:8080/callback'
+const SCOPE = 'openid email profile'
+
+
+const checkJwt = jwt({
+    secret: jwksRsa.expressJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+      jwksUri: `https://${DOMAIN}/.well-known/jwks.json`
+    }),
+  
+    // Validate the audience and the issuer.
+    issuer: `https://${DOMAIN}/`,
+    algorithms: ['RS256']
+  });
+
+async function validateUser(user_id) {
+  // check datastore for valid user
+  const q = datastore.createQuery(USER)
+  const results = await datastore.runQuery(q)
+  const user = results[0]
+    .filter(user => user.userId === user_id)
+    .map(fromDatastore)[0]
+  return user  
+}
+
 
 /* ------------- UTILITY FUNCTIONS END --------------------- */
 
@@ -89,7 +126,7 @@ async function findDuplicateName(boatName) {
 
   // // allow user to edit same boat
   // for (let i = 0; i < allBoats.length; i++) {
-  //   if (allBoats[i].name == boatName) { return 403 }
+  //   if (allBoats[i].name == boatName) { return 400 }
   // }
 
   return 0
@@ -99,8 +136,13 @@ async function verifyPatchRequest(req) {
   // req must be JSON
   if (req.get('content-type') !== 'application/json'){ return 415 }
 
+  const user = await validateUser(parseUserId(req))
+  
+  // invalid or unregistered user
+  if (user === undefined || user === null) { return 403 }
+
   //cannot find boat with this boat id
-  let boat = await viewBoat(req.params.boat_id).then(boat => { return boat[0] })
+  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat[0] })
 
   if (boat == undefined || boat === null) { return 404 }
 
@@ -140,8 +182,13 @@ async function verifyPutRequest(req) {
   // req must be JSON
   if (req.get('content-type') !== 'application/json'){ return 415 }
 
+  const user = await validateUser(parseUserId(req))
+  
+  // invalid or unregistered user
+  if (user === undefined || user === null) { return 403 }
+
   //cannot find boat with this boat id
-  let boat = await viewBoat(req.params.boat_id).then(boat => { return boat[0] })
+  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat[0] })
   if (boat == undefined || boat === null) { return 404 }
 
   // response must be JSON
@@ -179,6 +226,12 @@ async function verifyPostRequest(req) {
   if(req.get('content-type') !== 'application/json'){
     return 415
   }
+  
+  const user = await validateUser(parseUserId(req))
+
+  // invalid or unregistered user
+  if (user === undefined || user === null) { return 403 }
+  
   // response must be JSON
   if (!req.accepts(['application/json'])) { return 406 }
 
@@ -199,11 +252,41 @@ async function verifyPostRequest(req) {
   if (verifyBoatLength(req.body.length) === 400) { return 400 }
 
   // verify the boat name is not a duplicate, catches 403 error code
-  return findDuplicateName(req.body.name).then(result => { return result })
+  if (await findDuplicateName(req.body.name) === 400) { return 400 }
 }
 /* ------------- VERIFICATION FUNCTIONS END ---------------- */
 
 /* ------------- DATASTORE MODEL FUNCTIONS START ----------- */
+async function viewAllBoatsProtected(req) {
+  let limit = 5
+  const q = datastore.createQuery(BOAT).limit(limit)
+  const results = {}
+    let prev
+    if(Object.keys(req.query).includes("cursor")){
+        prev = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + req.query.cursor
+        q = q.start(req.query.cursor)
+    }
+    const owner = req.auth.sub.split('auth0|')[1]
+    const total_q = datastore.createQuery(BOAT)
+    const total_q_result = await datastore.runQuery(total_q)
+    const total_q_collection = total_q_result[0].filter(boat => boat.owner == owner)
+    results.total_collection_length = total_q_collection.length
+
+    return datastore.runQuery(q)
+      .then( (entities) => {
+        results.result = entities[0].filter(boat => boat.owner == owner).map(ds.fromDatastore);
+        if(typeof prev !== 'undefined'){
+            results.previous = prev
+        }
+        if(entities[1].moreResults !== ds.Datastore.NO_MORE_RESULTS ){
+            results.next = req.protocol + "://" + req.get("host") + req.baseUrl + "?cursor=" + entities[1].endCursor
+        }
+        return results
+    })
+}
+
+
+
 
 async function viewAllBoats(req) {
   let limit = 5
@@ -233,23 +316,29 @@ async function viewAllBoats(req) {
 }
 
 
-async function viewBoat(boat_id) {
+async function viewBoat(boat_id, user_id) {
+  // jwt didn't correspond to a registered user
+  if (user_id === undefined || user_id === null) { return 401 }
+
   const key = datastore.key([BOAT, parseInt(boat_id)])
   return datastore.get(key).then(boat => {
     if (boat[0] === undefined || boat[0] === null) { return 404 }
+
+    // boat doesn't belong to the user
+    if (boat[0].owner !== user_id) { return 403 }
     return boat.map(fromDatastore)
   })
 }
 
 
-async function addBoat(name, type, length) {
+async function addBoat(name, type, length, owner) {
   let key = datastore.key(BOAT)
   let newBoat = {
     'name': name, 
     'type': type, 
     'length': length, 
     'loads': [], 
-    'owner': null
+    'owner': owner
   }
   await datastore.save({ 'key': key, 'data': newBoat })
   return key
@@ -261,7 +350,7 @@ async function editBoatPut(req) {
   const {name, type, length } = req.body
   // verify the boat exists
   const key = datastore.key([BOAT, parseInt(boat_id)])
-  let boat = await viewBoat(boat_id).then(boat => { return boat[0] })
+  let boat = await viewBoat(boat_id, parseUserId(req)).then(boat => { return boat[0] })
   boat.name = name
   boat.type = type
   boat.length = length
@@ -270,13 +359,11 @@ async function editBoatPut(req) {
 }
 
 
-
-
 async function editBoatPatch(req) {
   const boat_id = req.params.boat_id
   const { name, type, length } = req.body
   const key = datastore.key([BOAT, parseInt(boat_id, 10)])
-  let boat = await viewBoat(boat_id).then(boat => { return boat[0] })
+  let boat = await viewBoat(boat_id, parseUserId(req)).then(boat => { return boat[0] })
 
   // check patch req attributes 
   boat.name = name === undefined ? boat.name : name
@@ -287,19 +374,22 @@ async function editBoatPatch(req) {
   return boat
 }
 
-async function deleteBoat(boat_id) {
+async function deleteBoat(boat_id, req) {
+
+  const user = await validateUser(parseUserId(req))
+
+  // invalid or unregistered user
+  if (user === undefined || user === null) { return 403 }
+
   const boat_key = datastore.key([BOAT, parseInt(boat_id, 10)])
   let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
   if (boat === undefined || boat === null) { return 404 }
 
   // check if a load has current boat as owner
   let foundLoad = false
-
-
   for (let i=0; i < boat.loads.length; i++) {
     await removeLoad(boat_id, boat.loads[i].id)
   }
-
   return datastore.delete(boat_key).then(result => { return result });
 }
 
@@ -356,6 +446,7 @@ async function removeLoad(boat_id, load_id) {
 
 /* ------------- ROUTING FUNCTIONS START ------------------- */
 
+// INVALID METHODS FOR THE GIVEN ROUTES
 router.put('/', (req, res) => {
   res.set('Accept', 'GET')
   res.status(405).json(errorMsg(405))
@@ -371,12 +462,13 @@ router.delete('/', (req, res) => {
   res.status(405).json(errorMsg(405))
 })
 
-router.get('/', async (req, res) => {
+
+router.get('/', checkJwt, async (req, res) => {
   if (resBodyIsJSON(req) === false) { 
     res.status(406).json(errorMsg(406))
     return
   }
-  const allBoats = await viewAllBoats(req)
+  const allBoats = await viewAllBoatsProtected(req)
   allBoats.result.forEach(boat => {
     generateSelf(boat, req, 'boats')
     boat.loads.forEach(load => generateSelf(load, req, 'loads'))
@@ -385,22 +477,29 @@ router.get('/', async (req, res) => {
 })
 
 
-router.get('/:boat_id', async (req, res) => {
+router.get('/:boat_id', checkJwt, async (req, res) => {
   if (resBodyIsJSON(req) === false) { 
     res.status(406).json(errorMsg(406))
     return
   }
-  const boat = await viewBoat(req.params.boat_id)
-  if (boat === 404) { 
-    res.status(404).json(errorMsg(404)) 
-  } else { 
-    generateSelf(boat[0], req, 'boats')
-    boat[0].loads.forEach(load => generateSelf(load, req, 'loads'))
-    res.status(200).json(boat[0]) 
+  const user = await validateUser(parseUserId(req))
+  const boat = await viewBoat(req.params.boat_id, user.userId)
+  switch(boat) {
+    case (403):
+      res.status(403).json(errorMsg(403)) 
+      break
+    case (404):
+      res.status(404).json(errorMsg(404)) 
+      break
+    default:
+      generateSelf(boat[0], req, 'boats')
+      boat[0].loads.forEach(load => generateSelf(load, req, 'loads'))
+      res.status(200).json(boat[0]) 
   }
 })
 
-router.post('/', async (req, res) => {
+
+router.post('/', checkJwt, async (req, res) => {
   const verifyResult = await verifyPostRequest(req)
   switch(verifyResult) {
     case 400:
@@ -417,21 +516,22 @@ router.post('/', async (req, res) => {
       break;
     default:
       const { name, type, length } = req.body
-      const postedBoat = await addBoat(name, type, length)
+      const owner = req.auth.sub.split('auth0|')[1]
+      const postedBoat = await addBoat(name, type, length, owner)
       // console.log(postedBoat);
       res.status(201).json({
         'id': parseInt(postedBoat.id, 10),
         'name': name,
         'type': type,
         'length': length,
-        'owner': null,
+        'owner': owner,
         'loads': [],
         'self': `${req.protocol}://${req.get('host')}${req.baseUrl}/${postedBoat.id}`
       })
   }
 })
 
-router.put('/:boat_id', async (req, res) => {
+router.put('/:boat_id', checkJwt, async (req, res) => {
   const verifyResult = await verifyPutRequest(req)
   switch (verifyResult) {
     case 400:
@@ -457,7 +557,7 @@ router.put('/:boat_id', async (req, res) => {
   }
 })
 
-router.patch('/:boat_id', async (req, res) => {
+router.patch('/:boat_id', checkJwt, async (req, res) => {
   const verifyResult = await verifyPatchRequest(req)
   switch (verifyResult) {
     case 400:
@@ -482,6 +582,21 @@ router.patch('/:boat_id', async (req, res) => {
   }
 })
 
+
+router.delete('/:boat_id', checkJwt, async (req, res) => {
+  const result = await deleteBoat(req.params.boat_id, req)
+  switch (result) {
+    case 403:
+      res.status(403).json(errorMsg(403))
+    case 404:
+      res.status(404).json(errorMsg(404))
+      break
+    default:
+      res.status(204).end()
+  }
+})
+
+
 // add load to boat
 router.put('/:boat_id/loads/:load_id', async (req, res) => {
   const result = await assignLoad(req.params.boat_id, req.params.load_id)
@@ -497,16 +612,6 @@ router.put('/:boat_id/loads/:load_id', async (req, res) => {
   }
 })
 
-router.delete('/:boat_id', async (req, res) => {
-  const result = await deleteBoat(req.params.boat_id)
-  switch (result) {
-    case 404:
-      res.status(404).json(errorMsg(404))
-      break
-    default:
-      res.status(204).end()
-  }
-})
 
 // remove load from boat
 router.delete('/:boat_id/loads/:load_id', async (req, res) => {
@@ -520,8 +625,24 @@ router.delete('/:boat_id/loads/:load_id', async (req, res) => {
   }
 })
 
-
 /* ------------- ROUTING FUNCTIONS END --------------------- */
 
+// CATCH INVALID JWTS AND OTHER MISC. ERRORS
+router.use(async (err, req, res, next) => {
+  // console.log(req)
+  if (req.method == 'GET' && req.path == '/') {
+    const allBoats = await viewAllBoats(req)
+    allBoats.result.forEach(boat => {
+    generateSelf(boat, req, 'boats')
+    boat.loads.forEach(load => generateSelf(load, req, 'loads'))
+  })
+  res.status(200).json(allBoats)
+  } else if (err.name == 'UnauthorizedError') {
+    res.status(401).json(errorMsg(401))
+  } else {
+    console.error(err)
+    res.status(500).send('500 Internal Error')
+  }
+})
 
 module.exports = router
