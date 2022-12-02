@@ -6,7 +6,6 @@ const router = express.Router()
 const ds = require('./datastore')
 const datastore = ds.datastore
 
-router.use(express.json())
 
 
 /* ------------- UTILITY FUNCTIONS START --------------- */
@@ -21,15 +20,35 @@ function generateSelf (obj, req, type) {
   obj['self'] = self
   return obj
 }
+
+
+
 /* ------------- UTILITY FUNCTIONS END ----------------- */
 
 /* ------------- DATASTORE MODEL FUNCTIONS START ------- */
+
+async function getAllUsers() {
+  const q = datastore.createQuery(USER)
+  return datastore.runQuery(q).then((entities) => {
+    return entities[0].map(fromDatastore)
+  })
+}
 
   
 /* ------------- DATASTORE MODEL FUNCTIONS END -------- */
 
 
 /* ------------- ROUTING FUNCTIONS START --------------------- */
+
+router.get('/', async (req, res) => {
+  const allUsers = await getAllUsers()
+  allUsers.forEach(user => {
+    generateSelf(user, req, 'users')
+  })
+  res.status(200).json(allUsers)
+})
+
+
 /* ------------- ROUTING FUNCTIONS END --------------------- */
 
 
