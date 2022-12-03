@@ -7,33 +7,36 @@ const ds = require('./datastore')
 const datastore = ds.datastore
 const { checkJwt } = require('./oauth')
 router.use(express.json())
+const { errorMsg } = require('./errorCodes')
+const { fromDatastore, generateSelf} = require('./commonFunctions')
 
 
 /* ------------- UTILITY FUNCTIONS START ------------------- */
 
-function errorMsg(statusCode) {
-  const error_msgs = {
-    '400': {"Error": "400 Bad Request", "Message": "There is an error in the request"},
-    '401': { "Error": "401 Unauthorized", "Message": "Missing or invalid credentials" },
-    '403': { "Error": "403 Forbidden", "Message": "Invalid credentials for the resource" },
-    '404': { "Error": "404 Not Found", "Message": "No resource with this id exists" },
-    '405': { "Error": "405 Method Not Allowed", "Message": "method not allowed"},
-    '406': { "Error": "406 Not Acceptable", "Message": "Server cannot provide media type"},
-    '415': { "Error": "415 Unsupported Media Type", "Message": "Server cannot accept media type"}
-  }
-  return error_msgs[String(statusCode)]
-}
-function fromDatastore(item) {
-  item.id = parseInt(item[datastore.KEY].id, 10);
-  return item;
-}
+// function errorMsg(statusCode) {
+//   const error_msgs = {
+//     '400': {"Error": "400 Bad Request", "Message": "There is an error in the request"},
+//     '401': { "Error": "401 Unauthorized", "Message": "Missing or invalid credentials" },
+//     '403': { "Error": "403 Forbidden", "Message": "Invalid credentials for the resource" },
+//     '404': { "Error": "404 Not Found", "Message": "No resource with this id exists" },
+//     '405': { "Error": "405 Method Not Allowed", "Message": "Method not allowed"},
+//     '406': { "Error": "406 Not Acceptable", "Message": "Server cannot provide requested media type"},
+//     '415': { "Error": "415 Unsupported Media Type", "Message": "Server cannot accept media type"}
+//   }
+//   return error_msgs[String(statusCode)]
+// }
+
+// function fromDatastore(item) {
+//   item.id = parseInt(item[datastore.KEY].id, 10);
+//   return item;
+// }
 
 
-function generateSelf (obj, req, type) {
-  const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
-  obj['self'] = self
-  return obj
-}
+// function generateSelf (obj, req, type) {
+//   const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
+//   obj['self'] = self
+//   return obj
+// }
 
 function reqBodyIsJSON(req) {
   // req must be JSON
@@ -118,9 +121,12 @@ async function verifyPatchRequest(req) {
   if (user === undefined || user === null) { return 403 }
 
   //cannot find boat with this boat id
-  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat[0] })
+  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat })
 
-  if (boat == undefined || boat === null) { return 404 }
+  if (boat == 403) { return 403 }
+  
+
+  if (boat == 404) { return 404 }
 
   // response must be JSON
   if (!req.accepts(['application/json'])) { return 406 }
@@ -143,7 +149,7 @@ async function verifyPatchRequest(req) {
   }
 
   // verfiy boat length
-  if (req.body.length !== undefined || req.body.length !== null) { 
+  if (req.body.length !== undefined && req.body.length !== null) { 
     if (verifyBoatLength(req.body.length) === 400) { return 400 }
   }
 
@@ -163,8 +169,12 @@ async function verifyPutRequest(req) {
   if (user === undefined || user === null) { return 403 }
 
   //cannot find boat with this boat id
-  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat[0] })
-  if (boat == undefined || boat === null) { return 404 }
+  let boat = await viewBoat(req.params.boat_id, user.userId).then(boat => { return boat })
+
+
+  if (boat == 403) { return 403 }
+
+  if (boat == 404) { return 404 }
 
   // response must be JSON
   if (!req.accepts(['application/json'])) { return 406 }
@@ -297,10 +307,12 @@ async function viewBoat(boat_id, user_id) {
 
   const key = datastore.key([BOAT, parseInt(boat_id)])
   return datastore.get(key).then(boat => {
+    
     if (boat[0] === undefined || boat[0] === null) { return 404 }
 
     // boat doesn't belong to the user
     if (boat[0].owner !== user_id) { return 403 }
+
     return boat.map(fromDatastore)
   })
 }
@@ -339,6 +351,7 @@ async function editBoatPatch(req) {
   const { name, type, length } = req.body
   const key = datastore.key([BOAT, parseInt(boat_id, 10)])
   let boat = await viewBoat(boat_id, parseUserId(req)).then(boat => { return boat[0] })
+  // console.log(boat)
 
   // check patch req attributes 
   boat.name = name === undefined ? boat.name : name
@@ -360,8 +373,10 @@ async function deleteBoat(boat_id, req) {
   let boat = await datastore.get(boat_key).then(boat => { return boat[0] })
   if (boat === undefined || boat === null) { return 404 }
 
+  if (boat.owner !== parseUserId(req)) { return 403 } 
+  
+
   // check if a load has current boat as owner
-  let foundLoad = false
   for (let i=0; i < boat.loads.length; i++) {
     await removeLoad(boat_id, boat.loads[i].id)
   }
@@ -380,9 +395,9 @@ async function assignLoad(boat_id, load_id) {
   // load already assigned to another boat
   if (load.carrier !== null) { return 400 }
 
-  // cannot add duplicate loads, 400 error
+  // cannot add duplicate loads, simply return without altering datastore
   for (let i = 0; i < boat.loads.length; i++) {
-    if (Object.values(boat.loads[i]).includes(load_id) === true) { return 400 }
+    if (Object.values(boat.loads[i]).includes(load_id) === true) { return 0 }
   }
 
   boat.loads.push({"id": parseInt(load_id, 10)})
@@ -563,6 +578,7 @@ router.delete('/:boat_id', checkJwt, async (req, res) => {
   switch (result) {
     case 403:
       res.status(403).json(errorMsg(403))
+      break
     case 404:
       res.status(404).json(errorMsg(404))
       break
