@@ -113,9 +113,10 @@ app.get('/getToken', async (req, res) => {
     if (error){
         res.status(500).send(error);
     } else {
-        const userId = response.body.sub.email
+        const userId = response.body.sub.sub.split('auth0|')[1]
         const name = response.body.sub.email
-
+        console.log(response.body)
+        
         res.render('result', {'idToken': req.query.id_token, 'userId': userId, 'name': name})
     }
   })
