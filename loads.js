@@ -14,7 +14,7 @@ function errorMsg(statusCode) {
   const error_msgs = {
     '401': { "Error": "401 Unauthorized", "Message": "missing or invalid credentials" },
     '403': { "Error": "403 Forbidden", "Message": "invalid credentials for the resource" },
-    '404': { "Error": "404 Not Found", "Message": "url endpoint does not exist" },
+    '404': { "Error": "404 Not Found", "Message": "no resource with this id exists" },
     '405': { "Error": "405 Method Not Allowed", "message": "method not allowed"},
     '406': { "Error": "406 Not Acceptable", "Message": "server cannot provide media type"},
     '415': { "Error": "415 Unsupported Media Type", "Message": "server cannot accept media type"}

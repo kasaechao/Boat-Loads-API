@@ -13,12 +13,13 @@ router.use(express.json())
 
 function errorMsg(statusCode) {
   const error_msgs = {
-    '401': { "Error": "401 Unauthorized", "Message": "missing or invalid credentials" },
-    '403': { "Error": "403 Forbidden", "Message": "invalid credentials for the resource" },
-    '404': { "Error": "404 Not Found", "Message": "url endpoint does not exist" },
-    '405': { "Error": "405 Method Not Allowed", "message": "method not allowed"},
-    '406': { "Error": "406 Not Acceptable", "Message": "server cannot provide media type"},
-    '415': { "Error": "415 Unsupported Media Type", "Message": "server cannot accept media type"}
+    '400': {"Error": "400 Bad Request", "Message": "There is an error in the request"},
+    '401': { "Error": "401 Unauthorized", "Message": "Missing or invalid credentials" },
+    '403': { "Error": "403 Forbidden", "Message": "Invalid credentials for the resource" },
+    '404': { "Error": "404 Not Found", "Message": "No resource with this id exists" },
+    '405': { "Error": "405 Method Not Allowed", "Message": "method not allowed"},
+    '406': { "Error": "406 Not Acceptable", "Message": "Server cannot provide media type"},
+    '415': { "Error": "415 Unsupported Media Type", "Message": "Server cannot accept media type"}
   }
   return error_msgs[String(statusCode)]
 }
@@ -69,34 +70,29 @@ async function validateUser(user_id) {
 
 function verifyBoatName(name) {
   // must be a string
-  // if (typeof name !== 'string') { return 400 }
+  if (typeof name !== 'string') { return 400 }
 
-  // // no boat name, boat name cannot be null, 
-  // // and boat name cannot be an empty string
-  // if (name === undefined || name === null || name.length === 0) { return 400 }
-
-  // // boat name cannot start with a space
-  // if (name[0] === '\s') { return 400 }
+  // no boat name, boat name cannot be null, 
+  // and boat name cannot be an empty string
+  if (name === undefined || name === null || name.length === 0) { return 400 }
 
   // // boat name cannot be longer than 20 characters
-  // if (name.length > 20) { return 400 }
-
+  if (name.length > 20) { return 400 }
   return 0
 }
 
 function verfifyBoatType(type) {
   // same requirements as boat name
-  // if (verifyBoatName(type) > 0) { return 400 }
-
+  if (verifyBoatName(type) > 0) { return 400 }
   return 0
 }
 
 function verifyBoatLength(length) {
   // length must be an integer
-  // if (typeof length !== 'number') {  return 400 }
+  if (typeof length !== 'number') {  return 400 }
 
-  // // cannot be 0 or negative length
-  // if (length <= 0) { return 400}
+  // cannot be 0 or negative length
+  if (length <= 0) { return 400}
 
   return 0
 }
@@ -140,7 +136,6 @@ async function verifyPatchRequest(req) {
   if (req.body.name !== undefined && req.body.name !== null) { 
     if (verifyBoatName(req.body.name) === 400) { return 400 }
   }
-
 
   // verify boat type is valid
   if (req.body.type !== undefined && req.body.type !== null) { 
