@@ -5,30 +5,20 @@ const express = require('express')
 const router = express.Router();
 const ds = require('./datastore')
 const datastore = ds.datastore
-
-const {
-    checkJwt, 
-    DOMAIN, 
-    CLIENT_ID,
-    CLIENT_SECRET, 
-    REDIRECT_URI,
-    SCOPE
-  } = require('./oauth')
-
+const { checkJwt } = require('./oauth')
 router.use(express.json())
-const { expressjwt: jwt, expressjwt } = require("express-jwt")
-const jwksRsa = require('jwks-rsa')
+
 
 /* ------------- UTILITY FUNCTIONS START ------------------- */
 
 function errorMsg(statusCode) {
   const error_msgs = {
-    '401': { "Error": "401 Unauthorized" },
-    '403': { "Error": "403 Forbidden" },
-    '404': { "Error": "404 Not Found" },
-    '405': { "Error": "405 Method Not Allowed" },
-    '406': { "Error": "406 Not Acceptable" },
-    '415': { "Error": "415 Unsupported Media Type "}
+    '401': { "Error": "401 Unauthorized", "Message": "missing or invalid credentials" },
+    '403': { "Error": "403 Forbidden", "Message": "invalid credentials for the resource" },
+    '404': { "Error": "404 Not Found", "Message": "url endpoint does not exist" },
+    '405': { "Error": "405 Method Not Allowed", "message": "method not allowed"},
+    '406': { "Error": "406 Not Acceptable", "Message": "server cannot provide media type"},
+    '415': { "Error": "415 Unsupported Media Type", "Message": "server cannot accept media type"}
   }
   return error_msgs[String(statusCode)]
 }
@@ -393,7 +383,7 @@ async function assignLoad(boat_id, load_id) {
   if (boat === undefined || boat === null || load === undefined || load === null) { return 404 }
 
   // load already assigned to another boat
-  if (load.carrier !== null) { return 403 }
+  if (load.carrier !== null) { return 400 }
 
   // cannot add duplicate loads, 400 error
   for (let i = 0; i < boat.loads.length; i++) {
@@ -594,8 +584,8 @@ router.put('/:boat_id/loads/:load_id', async (req, res) => {
     case 404: 
       res.status(404).json(errorMsg(404))
       break
-    case 403: 
-      res.status(403).json(errorMsg(403))
+    case 400: 
+      res.status(400).json(errorMsg(400))
       break
     default: 
       res.status(204).end()
