@@ -80,6 +80,11 @@ async function addUser(userId, name) {
     'userId': userId,
     'name': name
   }
+  let allUsers = await getAllUsers()
+  allUsers = allUsers.filter(user => user.userId === userId)
+
+  // don't add duplicate users
+  if (allUsers.length > 0) { return }
   await datastore.save({'key': key, 'data': newUser })
   return key
 }
@@ -115,7 +120,7 @@ app.get('/getToken', async (req, res) => {
     } else {
         const userId = response.body.sub.sub.split('auth0|')[1]
         const name = response.body.sub.email
-        console.log(response.body)
+        // console.log(response.body)
         
         res.render('result', {'idToken': req.query.id_token, 'userId': userId, 'name': name})
     }
