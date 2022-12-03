@@ -3,7 +3,7 @@
   <h1>Welcome to Kao's OAuth App</h1>
   <p>By clicking the button below, you will be redirected to login with a Auth0 account and the permission to access your email and profile will be requested. You will then be redirected to another page where jwt, unique user id, and email will be displayed.</p>
   
-  <form action="http://localhost:8080/authorize">
+  <form action={{authorizeUrl}}>
     <input type="submit" value="Auth0 authorization and authentication" class="btn btn-primary">
   </form>
 </div>

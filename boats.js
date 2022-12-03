@@ -6,6 +6,15 @@ const router = express.Router();
 const ds = require('./datastore')
 const datastore = ds.datastore
 
+const {
+    checkJwt, 
+    DOMAIN, 
+    CLIENT_ID,
+    CLIENT_SECRET, 
+    REDIRECT_URI,
+    SCOPE
+  } = require('./oauth')
+
 router.use(express.json())
 const { expressjwt: jwt, expressjwt } = require("express-jwt")
 const jwksRsa = require('jwks-rsa')
@@ -51,25 +60,6 @@ function parseUserId(req) {
   return req.auth.sub.split('auth0|')[1]
 }
 
-const DOMAIN = 'cs493-portfolio-saechaok.us.auth0.com'
-const CLIENT_ID = 'nEmEtb2gZbkreml2ay2uQGa6Uj3PQFw2'
-const CLIENT_SECRET = 'iWuLZMYvnQz5WsInf8VmUS3R8A3mZwDzeXPQwB65AG-o3m0aQcAyFMyrxdyQC_me'
-const REDIRECT_URI = 'http://localhost:8080/callback'
-const SCOPE = 'openid email profile'
-
-
-const checkJwt = jwt({
-    secret: jwksRsa.expressJwtSecret({
-      cache: true,
-      rateLimit: true,
-      jwksRequestsPerMinute: 5,
-      jwksUri: `https://${DOMAIN}/.well-known/jwks.json`
-    }),
-  
-    // Validate the audience and the issuer.
-    issuer: `https://${DOMAIN}/`,
-    algorithms: ['RS256']
-  });
 
 async function validateUser(user_id) {
   // check datastore for valid user
