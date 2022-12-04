@@ -48,7 +48,9 @@ The API models **three** entities.
 
 ### Authorization and Authentication
 
-Authorization is handled via Oauth 2.0 flow, and authentication is handled via OpenID Connect authentication flow. Auth0 is the chosen provider for both the authorization and authentication flow.
+CRUD operations for the boat entity is protected and requires authentication of the user for a successful request.
+
+Authorization and authentication is handled via Oauth 2.0 and OpenID Connect authentication flow. Auth0 is the chosen provider for the authorization and authentication flow.
 
 [Auth0 site link](https://auth0.com/)
 
