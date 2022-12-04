@@ -18,7 +18,6 @@ The API models **three** entities.
 |loads|array|list of loads currently on the boat|No|
 |owner|string|owner of the boat|No|
 
-*<sup>*</sup>Please reference API documentation for attribute constraints*
 
 ### Loads
 
@@ -30,7 +29,6 @@ The API models **three** entities.
 |volume|integer|the volume of the load in cubic feet|Yes<sup>*</sup>
 |carrier|object|the boat that holds this load|No
 
-*<sup>*</sup>Please reference API documentation for attribute constraints*
 
 ### Users
 
@@ -41,6 +39,7 @@ The API models **three** entities.
 |userId|string|user if of the user extracted from devdoed jwt|No
 |owned_boats|array|list of boats owned by the user|No
 
+<sup>*</sup>***Please reference API documentation for attribute constraints***
 
 ## API Summary
 
