@@ -58,7 +58,9 @@ Authorization is handled via Oauth 2.0 flow, and authentication is handled via O
 
 ### Supported Methods
 
-  - Both boats and users entities support CRUD operations (POST, GET, PUT, PATCH, DELETE)
+  - Both boats and loads entities support CRUD operations (POST, GET, PUT, PATCH, DELETE)
+  - boats have additional methods to add and remove loads
+  - Users entity only supports GET method
   - Successful requests and unsuccessful requests will result in 2XX and 4XX status codes, respectively, and to include response bodies where applicable.
   
 
