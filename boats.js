@@ -218,7 +218,7 @@ async function verifyPostRequest(req) {
 
 /* ------------- DATASTORE MODEL FUNCTIONS START ----------- */
 async function viewAllBoatsProtected(req) {
-  let limit = 5
+  let limit = 6
   const q = datastore.createQuery(BOAT).limit(limit)
   const results = {}
     let prev
@@ -230,7 +230,7 @@ async function viewAllBoatsProtected(req) {
     const total_q = datastore.createQuery(BOAT)
     const total_q_result = await datastore.runQuery(total_q)
     const total_q_collection = total_q_result[0].filter(boat => boat.owner == owner)
-    results.total_collection_length = total_q_collection.length
+    results.total_items = total_q_collection.length
 
     return datastore.runQuery(q)
       .then( (entities) => {
@@ -355,7 +355,9 @@ async function deleteBoat(boat_id, req) {
   for (let i=0; i < boat.loads.length; i++) {
     await removeLoad(boat_id, boat.loads[i].id)
   }
-  return datastore.delete(boat_key).then(result => { return result });
+
+  await datastore.delete(boat_key).then(result => { return result })
+  return boat
 }
 
 
@@ -416,6 +418,31 @@ async function assignBoatToUser(boat, owner, selfLink) {
   result.owned_boats.push({'id': parseInt(boat.id, 10), 'self': selfLink})
   
   await datastore.save({'key': key, 'data': result})
+}
+
+async function removeBoatFromUser(boat, owner) { 
+  // console.log(boat)
+  // console.log(owner)
+  boat = [boat]
+  boat = boat.map(fromDatastore)[0]
+  // console.log(boat)
+  
+  
+  const q = datastore.createQuery(USER)
+  let result = await datastore.runQuery(q).then((entities) => {
+    return entities[0].map(fromDatastore)
+  })
+  result = result.filter(user => user.userId === owner)[0]
+  const key = datastore.key([USER, parseInt(result.id)])
+  // console.log(result)
+  // console.log(key)
+
+  // find and remove boat from user's owned_boats
+  result.owned_boats= result.owned_boats.filter(user_boat => user_boat.id !== boat.id)
+
+  // console.log(result)
+  await datastore.save({'key': key, 'data': result})
+
 }
 
 /* ------------- DATASTORE MODEL FUNCTIONS END ------------- */
@@ -572,6 +599,7 @@ router.delete('/:boat_id', checkJwt, async (req, res) => {
       res.status(404).json(errorMsg(404))
       break
     default:
+      await removeBoatFromUser(result, parseUserId(req))
       res.status(204).end()
   }
 })

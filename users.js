@@ -34,7 +34,6 @@ async function getAllUsers() {
   })
 }
 
-  
 /* ------------- DATASTORE MODEL FUNCTIONS END -------- */
 
 
@@ -47,7 +46,6 @@ router.get('/', async (req, res) => {
   })
   res.status(200).json({"result":allUsers})
 })
-
 
 /* ------------- ROUTING FUNCTIONS END --------------------- */
 
