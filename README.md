@@ -39,7 +39,8 @@ The API models **three** entities.
 |userId|string|user if of the user extracted from devdoed jwt|No
 |owned_boats|array|list of boats owned by the user|No
 
-<sup>*</sup>***Please reference API documentation for attribute constraints***
+
+<sup>*</sup>***Please reference API documentation for attribute constraints on an entity***
 
 ## API Summary
 
