@@ -4,7 +4,7 @@ const jwksRsa = require('jwks-rsa')
 // NOTE: FLIP TO CHANGE BETWEEN DEVELOPMENT AND DEPLOYED
 // 0 = 'http://localhost:8080 
 // 1 = 'https://cs493-portfolio-saechaok.wl.r.appspot.com'
-const IS_DEPLOYED = 1
+const IS_DEPLOYED = 0
 
 // --------------------- CONFIGURATION START ---------------------------
 const APP_URL = IS_DEPLOYED == 0 ? 

@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
   allUsers.forEach(user => {
     generateSelf(user, req, 'users')
   })
-  res.status(200).json(allUsers)
+  res.status(200).json({"result":allUsers})
 })
 
 

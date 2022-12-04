@@ -96,7 +96,7 @@ app.get('/users', async (req, res) => {
 
 app.get('/getToken', async (req, res) => {
   var options = { method: 'POST',
-  url: `http://localhost:8080/addUser`,
+  url: `${APP_URL}/addUser`,
   headers: { 
     'content-type': 'application/json', 
     'Authorization': 'Bearer ' + req.query.id_token
@@ -128,7 +128,7 @@ app.get('/callback', async (req, res, next) => {
       { code: req.query.code,
         grant_type: 'authorization_code',
         client_id: CLIENT_ID,
-        redirect_uri: 'http://localhost:8080/profile',
+        redirect_uri: `${APP_URL}/profile`,
         client_secret: CLIENT_SECRET },
     json: true };
   request(options, (error, response, body) => {
@@ -141,7 +141,8 @@ app.get('/callback', async (req, res, next) => {
 })
 
 app.get('/authorize', async (req, res) => {
-  const url = `https:${DOMAIN}/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPE}&response_mode=query`
+  const url = `https://${DOMAIN}/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPE}&response_mode=query`
+  console.log(url)
   res.redirect(url)
 })
 

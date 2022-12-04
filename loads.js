@@ -5,35 +5,10 @@ const express = require('express')
 const router = express.Router()
 const ds = require('./datastore')
 const datastore = ds.datastore
-
 router.use(express.json())
-
+const { errorMsg } = require('./errorCodes')
+const { fromDatastore, generateSelf} = require('./commonFunctions')
 /* ------------- UTILITY FUNCTIONS START ------------------- */
-
-function errorMsg(statusCode) {
-  const error_msgs = {
-    '401': { "Error": "401 Unauthorized", "Message": "missing or invalid credentials" },
-    '403': { "Error": "403 Forbidden", "Message": "invalid credentials for the resource" },
-    '404': { "Error": "404 Not Found", "Message": "no resource with this id exists" },
-    '405': { "Error": "405 Method Not Allowed", "message": "Method not allowed"},
-    '406': { "Error": "406 Not Acceptable", "Message": "Server cannot provide requested media type"},
-    '415': { "Error": "415 Unsupported Media Type", "Message": "server cannot accept media type"}
-  }
-  return error_msgs[String(statusCode)]
-}
-
-
-function fromDatastore(item) {
-  item.id = parseInt(item[datastore.KEY].id, 10);
-  return item;
-}
-
-
-function generateSelf (obj, req, type) {
-  const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
-  obj['self'] = self
-  return obj
-}
 
 function reqBodyIsJSON(req) {
   // req must be JSON
@@ -53,28 +28,35 @@ function resBodyIsJSON(req) {
 
 function verifyLoadItem(itemName) {
   // must be a string
-  // if (typeof itemName !== 'string') { return 400 }
+  if (typeof itemName !== 'string') { return 400 }
 
-  // // no name, or name cannot be null, 
-  // // and load name cannot be an empty string
-  // if (itemName === undefined || itemName === null || item.length === 0) { return 400 }
+  // no name, or name cannot be null, 
+  // and load name cannot be an empty string
+  if (itemName === undefined || itemName === null || itemName.length === 0) { return 400 }
 
-  // // name cannot start with a space
-  // if (itemName[0] === '\s') { return 400 }
+  // name cannot start with a space
+  if (itemName[0] === ' ') { return 400 }
 
   // // name cannot be longer than 20 characters
-  // if (itemName.length > 20) { return 400 }
+  if (itemName.length > 20) { return 400 }
 
   return 0
 }
 
 
 function verifyLoadVolume(volume) {
-  // // volume must be an integer
-  // if (typeof volume !== 'number') {  return 400 }
+  // volume must be an integer
+  if (typeof volume !== 'number') {  return 400 }
 
-  // // cannot be 0 or negative length
-  // if (volume <= 0) { return 400}
+  // cannot be 0 or negative length
+  if (volume <= 0) { return 400 }
+
+  return 0
+}
+
+function verifyCreationDate(date) { 
+    // must be a string
+  if (typeof date !== 'string') { return 400 }
 
   return 0
 }
@@ -183,15 +165,16 @@ async function verifyPostRequest(req) {
        typeof req.body.item !== "string" || typeof req.body.creation_date !== "string" || typeof req.body.volume !== "number")) {
     return 400
   } 
+  
+  // verfiy load name is valid
+  if (verifyLoadItem(req.body.item) === 400) { return 400 }
 
-  // // verfiy load name is valid
-  // if (verifyLoadName(req.body.name) === 400) { return 400 }
 
-  // // verify load type is valid
-  // if (verfifyLoadType(req.body.type) === 400) { return 400 }
+  // verfiy load volume
+  if (verifyLoadVolume(req.body.volume) === 400) { return 400 }
 
-  // // verfiy load length
-  // if (verifyLoadLength(req.body.length) === 400) { return 400 }
+  // verify creation date
+  if (verifyCreationDate(req.body.creation_date) === 400) { return 400 }
 
   // // verify the load name is not a duplicate, catches 403 error code
   // return findDuplicateName(req.body.name).then(result => { return result })
