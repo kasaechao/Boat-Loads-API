@@ -17,6 +17,7 @@ The API models **three** entities.
 |length|integer|length of the boat in feet|Yes<sup>*</sup>|
 |loads|array|list of loads currently on the boat|No|
 |owner|string|owner of the boat|No|
+
 *<sup>*</sup>Please reference API documentation for attribute constraints*
 
 ### Loads
@@ -28,6 +29,7 @@ The API models **three** entities.
 |creation_date|string|date when the load was created|Yes<sup>*</sup>
 |volume|integer|the volume of the load in cubic feet|Yes<sup>*</sup>
 |carrier|object|the boat that holds this load|No
+
 *<sup>*</sup>Please reference API documentation for attribute constraints*
 
 ### Users
