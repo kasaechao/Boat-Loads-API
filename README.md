@@ -1,4 +1,6 @@
-# Boats Loads Users API
+# Boats Loads Users REST API
+
+CS493 - Cloud Application Development portfolio project. 
 
 ## Data Models
 
