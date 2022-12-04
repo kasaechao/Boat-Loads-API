@@ -51,6 +51,7 @@ The API models **three** entities.
 Authorization is handled via Oauth 2.0 flow, and authentication is handled via OpenID Connect authentication flow. Auth0 is the chosen provider for both the authorization and authentication flow.
 
 [Auth0 site link](https://auth0.com/)
+[OAuth 2.0 Authorization Framework] (https://auth0.com/docs/authenticate/protocols/oauth)
 
 
 ### Relationships
