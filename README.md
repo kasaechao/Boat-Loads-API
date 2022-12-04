@@ -44,9 +44,25 @@ The API models **three** entities.
 
 ## API Summary
 
+### Authorization and Authentication
+
+Authorization is handled via Oauth 2.0 flow, and authentication is handled via OpenID Connect authentication flow. Auth0 is the chosen provider for both the authorization and authentication flow.
+
+[Auth0 site link]: (https://auth0.com/)
+
+
 ### Relationships
 
-The Boats and Users entitites are related such that a user can own a boat. 
+  - The Boats and Users entitites are related such that a user can own a boat. 
+  - Boats and Loads are related such that loads can be on boats, and boats can contain loads. 
+
+### Supported Methods
+
+  - Both boats and users entities support CRUD operations (POST, GET, PUT, PATCH, DELETE)
+  - Successful requests and unsuccessful requests will result in 2XX and 4XX status codes, respectively, and to include response bodies where applicable.
+  
+
+### ***See documentation for additional details***
 
 
 
