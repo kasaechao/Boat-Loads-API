@@ -52,7 +52,7 @@ Authorization is handled via Oauth 2.0 flow, and authentication is handled via O
 
 [Auth0 site link](https://auth0.com/)
 
-[OAuth 2.0 Authorization Framework] (https://auth0.com/docs/authenticate/protocols/oauth)
+[OAuth 2.0 Authorization Framework](https://auth0.com/docs/authenticate/protocols/oauth/)
 
 
 ### Relationships
