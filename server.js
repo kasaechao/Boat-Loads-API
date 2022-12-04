@@ -54,19 +54,12 @@ async function getAllUsers() {
 }
 
 
-
-  
-/* ------------- DATASTORE MODEL FUNCTIONS END -------- */
-
-
-
-/* ------------- Datastore Model Functions ------------- */
-
 async function addUser(userId, name) {
   const key = datastore.key(USER)
   const newUser = {
     'userId': userId,
-    'name': name
+    'name': name,
+    'owned_boats': []
   }
   let allUsers = await getAllUsers()
   allUsers = allUsers.filter(user => user.userId === userId)
@@ -77,7 +70,9 @@ async function addUser(userId, name) {
   return key
 }
 
-/* ------------- Datastore Model Functions ------------- */
+
+  
+/* ------------- DATASTORE MODEL FUNCTIONS END -------- */
 
 
 /* ------------- Routing Functions --------------------- */
@@ -142,7 +137,7 @@ app.get('/callback', async (req, res, next) => {
 
 app.get('/authorize', async (req, res) => {
   const url = `https://${DOMAIN}/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=${SCOPE}&response_mode=query`
-  console.log(url)
+  // console.log(url)
   res.redirect(url)
 })
 

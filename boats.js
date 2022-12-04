@@ -13,31 +13,6 @@ const { fromDatastore, generateSelf} = require('./commonFunctions')
 
 /* ------------- UTILITY FUNCTIONS START ------------------- */
 
-// function errorMsg(statusCode) {
-//   const error_msgs = {
-//     '400': {"Error": "400 Bad Request", "Message": "There is an error in the request"},
-//     '401': { "Error": "401 Unauthorized", "Message": "Missing or invalid credentials" },
-//     '403': { "Error": "403 Forbidden", "Message": "Invalid credentials for the resource" },
-//     '404': { "Error": "404 Not Found", "Message": "No resource with this id exists" },
-//     '405': { "Error": "405 Method Not Allowed", "Message": "Method not allowed"},
-//     '406': { "Error": "406 Not Acceptable", "Message": "Server cannot provide requested media type"},
-//     '415': { "Error": "415 Unsupported Media Type", "Message": "Server cannot accept media type"}
-//   }
-//   return error_msgs[String(statusCode)]
-// }
-
-// function fromDatastore(item) {
-//   item.id = parseInt(item[datastore.KEY].id, 10);
-//   return item;
-// }
-
-
-// function generateSelf (obj, req, type) {
-//   const self = `${req.protocol}://${req.get('host')}/${type}/${obj.id}`
-//   obj['self'] = self
-//   return obj
-// }
-
 function reqBodyIsJSON(req) {
   // req must be JSON
   if (req.get('content-type') !== 'application/json'){ return false }
@@ -430,6 +405,18 @@ async function removeLoad(boat_id, load_id) {
   return 204
 }
 
+async function assignBoatToUser(boat, owner, selfLink) {
+  // console.log(boat)
+  const q = datastore.createQuery(USER)
+  let result = await datastore.runQuery(q).then((entities) => {
+    return entities[0].map(fromDatastore)
+  })
+  result = result.filter(user => user.userId === owner)[0]
+  const key = datastore.key([USER, parseInt(result.id)])
+  result.owned_boats.push({'id': parseInt(boat.id, 10), 'self': selfLink})
+  
+  await datastore.save({'key': key, 'data': result})
+}
 
 /* ------------- DATASTORE MODEL FUNCTIONS END ------------- */
 
@@ -509,6 +496,8 @@ router.post('/', checkJwt, async (req, res) => {
       const owner = req.auth.sub.split('auth0|')[1]
       const postedBoat = await addBoat(name, type, length, owner)
       // console.log(postedBoat);
+      const boatSelfLink = `${req.protocol}://${req.get('host')}${req.baseUrl}/${postedBoat.id}`
+      await assignBoatToUser(postedBoat, owner, boatSelfLink)
       res.status(201).json({
         'id': parseInt(postedBoat.id, 10),
         'name': name,
@@ -516,7 +505,7 @@ router.post('/', checkJwt, async (req, res) => {
         'length': length,
         'owner': owner,
         'loads': [],
-        'self': `${req.protocol}://${req.get('host')}${req.baseUrl}/${postedBoat.id}`
+        'self': boatSelfLink
       })
   }
 })
