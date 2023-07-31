@@ -48,12 +48,8 @@ The API models **three** entities.
 
 ### Authorization and Authentication
 
-CRUD operations for the boat entity is protected and requires authorization for a successful request. Authorization is provided in the request header via bearer token in the form of a [JWT (JSON web token)](https://en.wikipedia.org/wiki/JSON_Web_Token).
+CRUD operations for the boat entity is protected and requires authentication of the user for a successful request. Authentication is provided in the request header via bearer token in the form of a [JWT (JSON web token)](https://en.wikipedia.org/wiki/JSON_Web_Token).
 
-Both Authentication and authorization is handled by [Auth0](https://auth0.com/)
-
-
-[OAuth 2.0 Authorization Framework](https://auth0.com/docs/authenticate/protocols/oauth/)
 
 
 ### Relationships
